@@ -2,7 +2,7 @@
 
 namespace Glitch\Model\Mapper;
 
-abstract class Rdbms extends MapperAbstract
+abstract class RdbmsAbstract extends MapperAbstract
 {
 	/**
      * Zend_Db configuration options

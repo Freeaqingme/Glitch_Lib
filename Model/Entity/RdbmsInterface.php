@@ -2,8 +2,8 @@
 
 namespace Glitch\Model\Entity;
 
-class Rdbms
-    implements EntityInterface
+interface RdbmsInterface
+    extends EntityInterface
 {
     public function getId();
 

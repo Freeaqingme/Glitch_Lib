@@ -15,7 +15,7 @@ abstract class MapperAbstract
 
     public function createEntity($data = null, $type = null, $dataMapper = null)
     {
-        $obj = $this->_create($type, $data);
+        $obj = $this->_createEntity($type, $data);
         if (null !== $data) {
             $dataMapper = $this->_getDataMapperInstance($dataMapper, $data, $obj);
             $dataMapper->hydrate($obj, $data);
@@ -85,14 +85,15 @@ abstract class MapperAbstract
     {
         if (null === $obj->getId() || true === $force) {
             $result = $this->_insert($obj);
-            if ($result === false) {
+            if (! $result) {
                 return false;
-            } elseif($obj instanceof Model\Entity\Rdbms) {
-                $obj->setId($result);
-                return true;
-            } else {
-                return true;
             }
+
+            if($obj instanceof Model\Entity\Rdbms) {
+                $obj->setId($result);
+            }
+
+            return true;
         }
 
         return $this->_update($obj);

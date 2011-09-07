@@ -7,55 +7,39 @@ use Glitch\Model as Model;
 abstract class EntityAbstract
     implements EntityInterface,Rdbms
 {
-    /**
-     * ID of object
-     *
-     * @var mixed
-     */
+    const CONTEXT_REST = 'rest';
+    const CONTEXT_RDBMS = 'rdbms';
+
     protected $_id = null;
 
-    /**
-     *
-     *
-     * @var Glitch_Model_DBMapperAbstract
-     */
+    protected $_context;
+
     protected $_mapper = null;
 
-
-    public function __construct(Model\Mapper\MapperInterface $mapper)
+    public function __construct(Mapper\MapperInterface $mapper, $context = null)
     {
         $this->setMapper($mapper);
+
+        if($context) {
+            $this->setContext($context);
+        }
     }
 
-    /**
-     * Get the ID of this object (unique to the
-     * object type)
-     *
-     * @return mixed
-     */
-    public function getId()
+    public function setContext($context)
     {
-        return $this->_id;
-    }
-
-    /**
-     * Set the id for this object.
-     *
-     * This method implements the fluent interface
-     *
-     * @param mixed $id
-     * @return Glitch_Model_DomainObjectAbstract
-     * @throws LogicException If the id on the object is already set
-     */
-    public function setId($id)
-    {
-        if (null !== $this->getId()) {
-            throw new \LogicException('ID is immutable');
+        if ($this->getContext() != null && $this->getContext() != $context) {
+            throw new \RuntimeException('Cannot change context once set');
+        } elseif($context != self::CONTEXT_RDBMS && $context != self::CONTEXT_REST) {
+            throw new \RuntimeException('Unknown context was tried to set');
         }
 
-        $this->_id = $id;
-        return $this;
+        $this->_context = $context;
     }
+
+    public function getContext() {
+        return $this->_context;
+    }
+
 
     /**
      * Retrieve the related mapper of the current domain object
@@ -65,15 +49,6 @@ abstract class EntityAbstract
     public function getMapper()
     {
         return $this->_mapper;
-    }
-
-    /**
-     *
-     * @param Glitch_Model_MapperAbstract $mapper
-     */
-    public function setMapper(Glitch\Model\Mapper\MapperInterface $mapper)
-    {
-        $this->_mapper = $mapper;
     }
 
     /**
@@ -108,6 +83,36 @@ abstract class EntityAbstract
     public function toArray($class = 'Resource')
     {
         return $this->getMapper()->toArray($this, $class);
+    }
+
+    /**
+     * Get the ID of this object (unique to the
+     * object type)
+     *
+     * @return mixed
+     */
+    public function getId()
+    {
+        return $this->_id;
+    }
+
+    /**
+     * Set the id for this object.
+     *
+     * This method implements the fluent interface
+     *
+     * @param mixed $id
+     * @return Glitch_Model_DomainObjectAbstract
+     * @throws LogicException If the id on the object is already set
+     */
+    public function setId($id)
+    {
+        if (null !== $this->getId()) {
+            throw new \LogicException('ID is immutable');
+        }
+
+        $this->_id = $id;
+        return $this;
     }
 
 }

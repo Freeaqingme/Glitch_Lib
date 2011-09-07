@@ -5,9 +5,11 @@ use Glitch\Model;
 
 class EntityInterface
 {
-    public function __construct(Mapper\MapperInterface $mapper);
+    public function __construct(Mapper\MapperInterface $mapper, $context = null);
 
-//    public function setMapper(Mapper\MapperInterface $mapper);
+    public function setContext($context);
+
+    public function getContext();
 
     public function getMapper();
 

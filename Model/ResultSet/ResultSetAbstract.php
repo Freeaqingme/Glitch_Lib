@@ -16,13 +16,16 @@
  * @version     $Id$
  */
 
+namespace Glitch\Model\ResultSet;
+
 /**
  * Abstract iterable and countable result set that generates (and caches)
  *
  * @category    Glitch
  * @package     Glitch_Model
  */
-abstract class Glitch_Model_DomainResultSetAbstract implements Countable, Iterator
+abstract class ResultSetAbstract
+    implements ResultSetInterface
 {
     /**
      * Data mapper
@@ -45,33 +48,11 @@ abstract class Glitch_Model_DomainResultSetAbstract implements Countable, Iterat
      * @param Glitch_Model_MapperAbstract $mapper
      * @return void
      */
-    public function __construct($resultSet = null, Glitch_Model_MapperAbstract $mapper = null)
+    public function __construct($resultSet,
+                               \Glitch\Model\Mapper\MapperInterface $mapper)
     {
-        if (null !== $resultSet) {
-            $this->setResultSet($resultSet);
-        }
-
-        if (null !== $mapper) {
-            $this->setMapper($mapper);
-        }
-    }
-
-    /**
-     * Sets the result set
-     *
-     * @param array|Iterator $resultSet
-     * @return Glitch_Model_DomainResultSetAbstract
-     * @throws InvalidArgumentException
-     */
-    public function setResultSet($resultSet)
-    {
-        if (!is_array($resultSet) && !$resultSet instanceof Iterator) {
-            throw new InvalidArgumentException('Result set is invalid');
-        }
-
-        $this->_resultSet = $resultSet;
-
-        return $this;
+        $this->_setResultSet = $resultSet;
+        $this->_mapper = $mapper;
     }
 
     /**
@@ -85,30 +66,12 @@ abstract class Glitch_Model_DomainResultSetAbstract implements Countable, Iterat
     }
 
     /**
-     * Sets the data mapper
-     *
-     * @param Glitch_Model_MapperAbstract $mapper
-     * @return Glitch_Model_DomainResultSetAbstract
-     */
-    public function setMapper(Glitch_Model_MapperAbstract $mapper)
-    {
-        $this->_mapper = $mapper;
-
-        return $this;
-    }
-
-    /**
      * Gets the data mapper
      *
      * @return Glitch_Model_MapperAbstract
      */
     public function getMapper()
     {
-        if (null === $this->_mapper) {
-            $class = get_class($this);
-            $mapper = substr($class, 0, strrpos($class, '_')) . '_Mapper';
-            $this->setMapper(new $mapper());
-        }
         return $this->_mapper;
     }
 
@@ -137,13 +100,13 @@ abstract class Glitch_Model_DomainResultSetAbstract implements Countable, Iterat
         $result = $this->_resultSet[$this->key()];
 
         //If result is already an entity, return the entity
-        if ($result instanceof Glitch_Model_DomainObjectAbstract) {
+        if ($result instanceof \Glitch\Model\Entity\EntityInterface) {
             return $result;
         }
 
         // Let the mapper create object and populate with the result
         $mapper = $this->getMapper();
-        return $mapper->create($result);
+        return $mapper->createEntity($result);
     }
 
     /**
@@ -156,6 +119,7 @@ abstract class Glitch_Model_DomainResultSetAbstract implements Countable, Iterat
         if ($this->_resultSet instanceof Iterator) {
             return $this->_resultSet->key();
         }
+
         return key($this->_resultSet);
     }
 
@@ -169,6 +133,7 @@ abstract class Glitch_Model_DomainResultSetAbstract implements Countable, Iterat
         if ($this->_resultSet instanceof Iterator) {
            return $this->_resultSet->next();
         }
+
         return next($this->_resultSet);
     }
 
@@ -182,6 +147,7 @@ abstract class Glitch_Model_DomainResultSetAbstract implements Countable, Iterat
         if ($this->_resultSet instanceof Iterator) {
             return $this->_resultSet->rewind();
         }
+
         return reset($this->_resultSet);
     }
 
