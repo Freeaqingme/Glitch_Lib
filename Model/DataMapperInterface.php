@@ -27,7 +27,7 @@ interface DataMapperInterface
      * @param Glitch_Model_DomainObjectAbstract $obj
      * @return mixed
      */
-    public function fromEntity(Glitch\Model\Entity\EntityInterface $obj);
+    public function dehydrate(Glitch\Model\Entity\EntityInterface $obj);
 
     /**
      * Convert the entity to an array

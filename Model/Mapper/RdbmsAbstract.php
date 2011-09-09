@@ -62,7 +62,7 @@ abstract class RdbmsAbstract extends MapperAbstract
      */
     protected function _getDbTable()
     {
-        return new Zend_Db_Table($this->_options);
+        return new \Zend_Db_Table($this->_options);
     }
 
     /**
@@ -73,8 +73,8 @@ abstract class RdbmsAbstract extends MapperAbstract
      */
     protected function _setOptions($name)
     {
-        $this->_options[Zend_Db_Table::NAME] = $name;
-        $this->_options[Zend_Db_Table::PRIMARY] = $this->_primaryKey;
+        $this->_options[\Zend_Db_Table::NAME] = $name;
+        $this->_options[\Zend_Db_Table::PRIMARY] = $this->_primaryKey;
     }
 
 
