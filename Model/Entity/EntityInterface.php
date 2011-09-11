@@ -3,11 +3,9 @@
 namespace Glitch\Model\Entity;
 use Glitch\Model;
 
-class EntityInterface
+interface EntityInterface
 {
-    public function __construct(Mapper\MapperInterface $mapper, $context = null);
-
-    public function setContext($context);
+    public function __construct(Model\Mapper\MapperInterface $mapper);
 
     public function getContext();
 
@@ -36,6 +34,6 @@ class EntityInterface
      * @param Glitch_Model_DomainObjectAbstract $obj
      * @return array
      */
-    public function toArray($dataMapper = null);
+    public function toArray();
 
 }

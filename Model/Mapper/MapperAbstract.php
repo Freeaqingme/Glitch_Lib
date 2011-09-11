@@ -6,113 +6,64 @@
  * @package     Glitch_Model
  */
 namespace Glitch\Model\Mapper;
+use Glitch\Model\RdbmsMapperAbstractTest\FormatMapper;
+
 use Glitch\Model as Model;
 
 abstract class MapperAbstract
     implements MapperInterface
 {
-    protected $_dataMappers = array();
+    protected $_formatMappers = array();
 
-    public function createEntity($data = null, $type = null, $dataMapper = null)
+    abstract protected function _getDefaultFormatMapperName($obj = null, $data = null);
+
+    abstract protected function _createEntity($type = null, $data = null);
+
+    public function createEntity($data = null, $type = null, $formatMapper = null)
     {
         $obj = $this->_createEntity($type, $data);
         if (null !== $data) {
-            $dataMapper = $this->_getDataMapperInstance($dataMapper, $data, $obj);
-            $dataMapper->hydrate($obj, $data);
+            $formatMapper = $this->_getFormatMapperName($formatMapper, $obj, $data);
+            $formatMapper::populate($obj, $data);
         }
 
         return $obj;
     }
 
-    protected function _getDataMapperInstance(
-                            $dataMapperName,
-                            Glitch\Model\Entity\EntityInterface $obj,
+    /**
+     * @param string|callbac|Model\FormatMapperInterface $formatMapper
+     * @param Model\Entity\EntityInterface $obj (optional) entity to derive the formatmapper to use from
+     * @param mixed $data (optional) may be used to derive format mapper to use from
+     * @return class name of format mapper
+     * @todo implement a repository so that there wont be a zillion instances of one class
+     */
+    protected function _getFormatMapperName(
+                            $formatMapperName = null,
+                            Model\Entity\EntityInterface $obj = null,
                             $data = null)
     {
-        if (null == $dataMapperName) {
-            $dataMapperName = $this->_getDefaultDataMapperName($obj, $data);
-        } elseif(is_callable($dataMapperName)) {
-            $dataMapperName = call_user_func_array($obj, $data);
+        if (null == $formatMapperName) {
+            $formatMapperName = $this->_getDefaultFormatMapperName($obj, $data);
+        } elseif(is_callable($formatMapperName)) {
+            $formatMapperName = call_user_func_array($formatMapperName, array($obj, $data));
         }
 
-        if(is_string($dataMapperName) &&
-           array_key_exists(strtolower($dataMapperName), $this->_dataMappers))
-        {
-            $dataMapper = $this->_dataMappers[strtolower($dataMapperName)];
-
-        } elseif(is_string($dataMapperName)) {
-            $dataMapper = new $dataMapperName();
-            $this->_dataMappers[strtolower($dataMapper)] = $dataMapper;
-
-        } elseif ($dataMapperName instanceof Glitch\Model\DataMapperInterface) {
-            $this->_dataMappers[strtolower(get_class($dataMapper))] = $dataMapperName;
-            return $dataMapperName;
-
-        } elseif (!array_key_exists(strtolower($dataMapperName), $this->_dataMappers)) {
-            throw new RuntimeException(
-                'The requested datamapper could not be found'
-            );
+        if ($formatMapperName instanceof Model\FormatMapperInterface) {
+            return $formatMapperName;
         }
 
-        return $dataMapper;
+        $formatMapper = new $formatMapperName();
+        if (!$formatMapper instanceof Model\FormatMapperInterface) {
+            throw new \RuntimeException('Invalid Format Mapper requested');
+        }
+
+        return $formatMapper;
     }
 
-    abstract protected function _getDefaultDataMapperName($obj = null, $data = null);
-
-    abstract protected function _createEntity($type = null, $data = null);
-
-    /**
-     * Create a new instance of the DomainResultSet that this
-     * mapper is responsible for
-     *
-     * @param mixed $data
-     * @return Glitch_Model_DomainResultSetAbstract
-     */
-    abstract public function createResultSet($data);
-
-
-    /**
-     * Save the DomainObject
-     *
-     * Store the DomainObject in persistent storage. Either insert
-     * or update the store as required.
-     *
-     * @param Glitch_Model_DomainObjectAbstract $obj
-     * @param bool $force
-     * @return mixed
-     */
-    public function save(Model\EntityInterface $obj, $force = false)
+    public function yieldEntity(Model\Entity\EntityInterface $entity, $formatMapper = null)
     {
-        if (null === $obj->getId() || true === $force) {
-            $result = $this->_insert($obj);
-            if (! $result) {
-                return false;
-            }
-
-            if($obj instanceof Model\Entity\Rdbms) {
-                $obj->setId($result);
-            }
-
-            return true;
-        }
-
-        return $this->_update($obj);
+        $formatMapper = $this->_getFormatMapperName($formatMapper, $entity);
+        return $formatMapper::yield($entity);
     }
-
-     public function toArray(Model\Entity\EntityInterface $entity, $dataMapper = null)
-     {
-        $dataMapper = $this->_getDataMapperInstance($dataMapper, $entity);
-        return $dataMapper->toArray($entity);
-     }
-
-    /**
-     * Delete the DomainObject
-     *
-     * Delete the DomainObject from persistent storage.
-     *
-     * @param Glitch_Model_DomainObjectAbstract $obj
-     * @return boolean
-     */
-    abstract public function delete(Model\Entity\EntityInterface $obj);
 
 }

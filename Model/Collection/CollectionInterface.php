@@ -1,10 +1,10 @@
 <?php
 
-namespace Glitch\Model\ResultSet;
+namespace Glitch\Model\Collection;
 
-interface ResultSetInterface extends Countable, Iterator
+interface CollectionInterface extends \Countable, \Iterator
 {
-    public function __construct($resultSet = null,
+    public function __construct($resultSet,
                                 \Glitch\Model\Mapper\MapperInterface $mapper);
 
     public function getMapper();

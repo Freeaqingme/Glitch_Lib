@@ -6,6 +6,9 @@ use Glitch\Model as Model;
 
 interface MapperInterface
 {
+    const CONTEXT_REST = 'rest';
+    const CONTEXT_RDBMS = 'rdbms';
+
     /**
      * Create a new entity using the data supplied.
      * Using the Type parameter a specific class to be used
@@ -22,7 +25,7 @@ interface MapperInterface
      * Create a result set using the data supplied.
      * @param Array $data
      */
-    public function createResultSet($data);
+    public function createCollection($data);
 
     /**
      * Save the supplied entity
@@ -33,5 +36,7 @@ interface MapperInterface
 
     public function delete(Model\Entity\EntityInterface $entity);
 
-    public function toArray(Model\Entity\EntityInterface $entity, $dataMapper = null);
+    public function yieldEntity(Model\Entity\EntityInterface $entity, $formatMapper = null);
+
+    public function getContext();
 }

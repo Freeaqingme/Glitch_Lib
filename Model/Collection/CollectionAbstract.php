@@ -16,7 +16,7 @@
  * @version     $Id$
  */
 
-namespace Glitch\Model\ResultSet;
+namespace Glitch\Model\Collection;
 
 /**
  * Abstract iterable and countable result set that generates (and caches)
@@ -24,8 +24,8 @@ namespace Glitch\Model\ResultSet;
  * @category    Glitch
  * @package     Glitch_Model
  */
-abstract class ResultSetAbstract
-    implements ResultSetInterface
+abstract class CollectionAbstract
+    implements CollectionInterface
 {
     /**
      * Data mapper

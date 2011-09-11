@@ -1,6 +1,7 @@
 <?php
 
 namespace Glitch\Model\Mapper;
+use Glitch\Model as Model;
 
 abstract class RdbmsAbstract extends MapperAbstract
 {
@@ -10,16 +11,17 @@ abstract class RdbmsAbstract extends MapperAbstract
      * @var array
      */
     protected $_options = array();
+    protected $_dbTable;
 
-    protected $_primaryKey;
-    protected $_name;
     protected $_mapper;
     protected $_lastInsertId;
 
     public function __construct()
     {
-        $this->_setOptions($this->_name);
+        $this->_setOptions($this->getTableName());
     }
+
+    abstract function getTableName();
 
     /**
      * Fetch a domain object by id
@@ -35,12 +37,44 @@ abstract class RdbmsAbstract extends MapperAbstract
 
         $table = $this->_getDbTable();
         $select = $table->select()
-                        ->where($this->_primaryKey.' = ?', $id);
+                        ->where($this->getTableName().'.'.$this->_getPK().' = ?', $id);
 
         $obj = $table->fetchRow($select);
         if (null === $obj) return null;
 
-        return $this->create($obj->toArray());
+        return $this->createEntity($obj->toArray());
+    }
+
+    abstract protected function _getPK();
+
+    /**
+     * Save the DomainObject
+     *
+     * Store the DomainObject in persistent storage. Either insert
+     * or update the store as required.
+     *
+     * @param Glitch_Model_DomainObjectAbstract $obj
+     * @param bool $force
+     * @return mixed
+     */
+    public function save(Model\Entity\EntityInterface $obj, $forceNew = false, $formatMapper = null)
+    {
+        if ($forceNew
+            || ($obj instanceof  Model\Entity\RdbmsInterface && null === $obj->getId()))
+        {
+            $result = $this->_insert($obj, $formatMapper);
+            if (! $result) {
+                return false;
+            }
+
+            if($obj instanceof Model\Entity\RdbmsInterface) {
+                $obj->setId($result);
+            }
+
+            return true;
+        }
+
+        return $this->_update($obj, $formatMapper);
     }
 
     /**
@@ -52,7 +86,7 @@ abstract class RdbmsAbstract extends MapperAbstract
     {
         $table = $this->_getDbTable();
         $select = $table->select();
-        return $this->createResultSet($table->fetchAll($select));
+        return $this->createCollection($table->fetchAll($select));
     }
 
     /**
@@ -62,7 +96,11 @@ abstract class RdbmsAbstract extends MapperAbstract
      */
     protected function _getDbTable()
     {
-        return new \Zend_Db_Table($this->_options);
+        if (!$this->_dbTable) {
+            $this->_dbTable = new \Zend_Db_Table($this->_options);
+        }
+
+        return $this->_dbTable;
     }
 
     /**
@@ -74,7 +112,7 @@ abstract class RdbmsAbstract extends MapperAbstract
     protected function _setOptions($name)
     {
         $this->_options[\Zend_Db_Table::NAME] = $name;
-        $this->_options[\Zend_Db_Table::PRIMARY] = $this->_primaryKey;
+        $this->_options[\Zend_Db_Table::PRIMARY] = $this->_getPK();
     }
 
 
@@ -87,12 +125,21 @@ abstract class RdbmsAbstract extends MapperAbstract
      * @param Glitch_Model_DomainObjectAbstract $obj
      * @return mixed
      */
-    protected function _insert(Glitch_Model_DomainObjectAbstract $obj)
+    protected function _insert(Model\Entity\EntityInterface $entity, $formatMapper)
     {
+        if (!$entity instanceof Model\Entity\RdbmsInterface) {
+            throw new \RuntimeException(
+                'Unable to delete entity that does not implement RdbmsInterace'
+            );
+        }
+
+
         $table = $this->_getDbTable();
 
-        $data = $this->toArray($obj);
-        $table->getAdapter()->quoteInto($this->_primaryKey.'= ?', $obj->getId());
+        $formatMapper = $this->_getInsertFormatMapper($formatMapper, $entity);
+        $data = $formatMapper::yield($entity);
+        $table->getAdapter()->quoteInto(
+            $this->getTableName().'.'.$this->_getPK().'= ?', $entity->getId());
 
         // Store last inserted ID
         $this->_lastInsertId = $table->insert($data);
@@ -119,14 +166,33 @@ abstract class RdbmsAbstract extends MapperAbstract
      * @param Glitch_Model_DomainObjectAbstract $obj
      * @return mixed
      */
-    protected function _update(Glitch_Model_DomainObjectAbstract $obj)
+    protected function _update(Model\Entity\EntityInterface $entity)
     {
-        $table = $this->_getDbTable();
+        if (!$entity instanceof Model\Entity\RdbmsInterface) {
+            throw new \RuntimeException(
+                'Unable to delete entity that does not implement RdbmsInterace'
+            );
+        }
 
-        $data = $this->toArray($obj);
-        $where = $table->getAdapter()->quoteInto($this->_primaryKey.'= ?', $obj->getId());
+        $table = $this->_getDbTable();
+        $formatMapper = $this->_getUpdateFormatMapper($formatMapper, $entity);
+        $data = $formatMapper::yield($entity);
+
+        $where = $table->getAdapter()->quoteInto(
+                    $this->getTableName().'.'.$this->_getPK().'= ?', $entity->getId());
         return $table->update($data, $where);
     }
+
+    protected  function _getInsertFormatMapper($formatMapper, $entity)
+    {
+        return $this->_getFormatMapperInstance($formatMapper, $entity);
+    }
+
+    protected  function _getUpdateFormatMapper($formatMapper, $entity)
+    {
+        return $this->_getFormatMapperInstance($formatMapper, $entity);
+    }
+
 
     /**
      * Delete the DomainObject from persistent storage
@@ -137,11 +203,25 @@ abstract class RdbmsAbstract extends MapperAbstract
      * @param Glitch_Model_DomainObjectAbstract $obj
      * @return boolean
      */
-    protected function _delete(Glitch_Model_DomainObjectAbstract $obj)
+    public function delete(Model\Entity\EntityInterface $entity)
     {
+        if (!$entity instanceof Model\Entity\RdbmsInterface) {
+            throw new \RuntimeException(
+                'Unable to delete entity that does not implement RdbmsInterace'
+            );
+        }
+
         $table = $this->_getDbTable();
 
-        $where = $table->getAdapter()->quoteInto($this->_primaryKey.'=?', $obj->getId());
+        $where = $table->getAdapter()->quoteInto(
+                     $this->getTableName().'.'.$this->_getPK() . ' = ?', $entity->getId()
+                 );
+
         return $table->delete($where);
+    }
+
+    public function getContext()
+    {
+        return Model\Mapper\MapperInterface::CONTEXT_RDBMS;
     }
 }

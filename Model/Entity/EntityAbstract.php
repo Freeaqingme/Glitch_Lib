@@ -1,45 +1,24 @@
 <?php
 
 namespace Glitch\Model\Entity;
-
-use Glitch\Model as Model;
+use Glitch\Model;
 
 abstract class EntityAbstract
-    implements EntityInterface,Rdbms
+    implements EntityInterface,RdbmsInterface
 {
-    const CONTEXT_REST = 'rest';
-    const CONTEXT_RDBMS = 'rdbms';
 
     protected $_id = null;
 
-    protected $_context;
-
     protected $_mapper = null;
 
-    public function __construct(Mapper\MapperInterface $mapper, $context = null)
+    public function __construct(Model\Mapper\MapperInterface $mapper)
     {
         $this->setMapper($mapper);
-
-        if($context) {
-            $this->setContext($context);
-        }
-    }
-
-    public function setContext($context)
-    {
-        if ($this->getContext() != null && $this->getContext() != $context) {
-            throw new \RuntimeException('Cannot change context once set');
-        } elseif($context != self::CONTEXT_RDBMS && $context != self::CONTEXT_REST) {
-            throw new \RuntimeException('Unknown context was tried to set');
-        }
-
-        $this->_context = $context;
     }
 
     public function getContext() {
-        return $this->_context;
+        return $this->getMapper()->getContext();
     }
-
 
     /**
      * Retrieve the related mapper of the current domain object
@@ -49,6 +28,11 @@ abstract class EntityAbstract
     public function getMapper()
     {
         return $this->_mapper;
+    }
+
+    public function setMapper(Model\Mapper\MapperInterface $mapper)
+    {
+        $this->_mapper = $mapper;
     }
 
     /**
@@ -73,16 +57,21 @@ abstract class EntityAbstract
     }
 
     /**
-     * Converts the DomainObject back to a data array
+     * Converts the Entity to a data array
      *
-     * To be implemented by the concrete mapper class
-     *
-     * @param Glitch_Model_DomainObjectAbstract $obj
      * @return array
      */
-    public function toArray($class = 'Resource')
+    public function toArray()
     {
-        return $this->getMapper()->toArray($this, $class);
+        $values = array();
+        $methods = get_class_methods($this);
+        foreach($methods as $method) {
+            if(substr($method, 0, 3) == 'get') {
+                $values[lcfirst(substr($method,3))] = $this->$method();
+            }
+        }
+
+        return $values;
     }
 
     /**
@@ -108,7 +97,7 @@ abstract class EntityAbstract
     public function setId($id)
     {
         if (null !== $this->getId()) {
-            throw new \LogicException('ID is immutable');
+            throw new \LogicException('Cannot re-set ID, it is immutable');
         }
 
         $this->_id = $id;
